@@ -7,7 +7,7 @@ Servo myServo;          // create servo object
 const int irSensorPin = 4;
 int counter=0;
 int servoPin = 18;      // GPIO pin connected to servo signal
-
+int entry=0;
 TaskHandle_t readIRSensorTaskHandle = NULL;
 
 void readIRSensorTask(void *pvParameters) {
@@ -17,8 +17,14 @@ void readIRSensorTask(void *pvParameters) {
     int sensorState = digitalRead(irSensorPin);
 
     if (sensorState == LOW) {
-          myServo.write(180);     // move back to 0 degrees
-
+      if(entry==0){
+        entry++;
+        myServo.write(180);     // move back to 0 degrees
+      }
+      else{
+        entry=0;
+        myServo.write(0);     // move back to 0 degrees
+      }
       digitalWrite(BUZZER_PIN, HIGH);  // buzzer ON
       delay(100);                      // wait 0.5s
       digitalWrite(BUZZER_PIN, LOW);  // buzzer OFF
@@ -31,13 +37,11 @@ void readIRSensorTask(void *pvParameters) {
       Serial.print("Counter: ");
       Serial.println(counter);
     } 
-    else{
-          myServo.write(0);     // move back to 0 degrees
 
 
   // Sweep back from 180° to 0°
  
-    }
+    
   }
 }
 
