@@ -1,55 +1,72 @@
-#define BUZZER_PIN 5   // change to your GPIO
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
-const int irSensorPin = 4;
-int counter=0;
+#define BUZZER_PIN 5       // buzzer pin
+const int irSensorPin = 4; // IR sensor pin
+int counter = 0;
 
 TaskHandle_t readIRSensorTaskHandle = NULL;
 
-void readIRSensorTask(void *pvParameters) {
-  
+// Initialize LCD (address 0x27 or 0x3F depending on module, 16 columns, 2 rows)
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-  while(1) {
+void readIRSensorTask(void *pvParameters) {
+  while (1) {
     int sensorState = digitalRead(irSensorPin);
 
     if (sensorState == LOW) {
-      digitalWrite(BUZZER_PIN, HIGH);  // buzzer ON
-      delay(100);                      // wait 0.5s
-      digitalWrite(BUZZER_PIN, LOW);  // buzzer OFF
-      delay(100);                      
-      Serial.println("Object Detected!");
-      counter+=1;
-      if (counter >= 25) {
-        counter=0;
-      }
-      Serial.print("Counter: ");
-      Serial.println(counter);
+      // Beep buzzer
+      digitalWrite(BUZZER_PIN, HIGH);
+      vTaskDelay(pdMS_TO_TICKS(100));
+      digitalWrite(BUZZER_PIN, LOW);
+      vTaskDelay(pdMS_TO_TICKS(100));
 
-    } 
+      // Update counter
+      counter++;
+      if (counter >= 25) {
+        counter = 0;
+      }
+
+      // Show on LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Object Detected");
+      lcd.setCursor(0, 1);
+      lcd.print("Count: ");
+      lcd.print(counter);
+
+    } else {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("All Clear");
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(200)); // small delay
   }
 }
 
 void setup() {
-  
-  Serial.begin(115200);
-
-  
   pinMode(irSensorPin, INPUT_PULLUP);
   pinMode(BUZZER_PIN, OUTPUT);
 
-  Serial.println("IR Sensor Ready. Creating RTOS task...");
+  // Start LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("IR Sensor Ready");
 
-  
+  // Create FreeRTOS task
   xTaskCreatePinnedToCore(
-      readIRSensorTask,      
-      "Read IR Sensor Task", 
-      2048,                  
-      NULL,                  
-      1,                     
-      &readIRSensorTaskHandle, 
-      1                     
+      readIRSensorTask,        // Task function
+      "Read IR Sensor Task",   // Name
+      2048,                    // Stack size
+      NULL,                    // Parameters
+      1,                       // Priority
+      &readIRSensorTaskHandle, // Task handle
+      1                        // Run on core 1
   );
 }
 
-void loop(){
-
+void loop() {
+  // Nothing here, everything runs in tasks
 }
